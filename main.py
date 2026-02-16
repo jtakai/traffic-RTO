@@ -16,8 +16,8 @@ app.add_middleware(
 )
 
 os.getenv('GOOGLE_MAPS_API_KEY')
-#gmaps = googlemaps.Client(key=API_KEY)
-#gmaps = googlemaps.Client(key='AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4')
+gmaps = googlemaps.Client(key=API_KEY)
+gmaps = googlemaps.Client(key='AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4')
 
 @app.get("/traffic-forecast")
 async def get_forecast():
