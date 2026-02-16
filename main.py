@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 import googlemaps
 from datetime import datetime, timedelta
 import time
@@ -14,8 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-gmaps = googlemaps.Client(key=API_KEY)
-gmaps = googlemaps.Client(key='AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4')
+os.getenv('GOOGLE_MAPS_API_KEY')
+#gmaps = googlemaps.Client(key=API_KEY)
+#gmaps = googlemaps.Client(key='AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4')
 
 @app.get("/traffic-forecast")
 async def get_forecast():
