@@ -36,7 +36,7 @@ async def get_forecast():
     try:
         for i in range(7):
             current_day = start_date + timedelta(days=i)
-            ts = int(time.mktime(current_day.timetuple()))
+            ts = int(current_day.timestamp())
             
             result = gmaps.distance_matrix(
                 origins=origin,
