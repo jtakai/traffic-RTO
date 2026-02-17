@@ -13,6 +13,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"message": "Traffic API is Live", "usage": "/traffic-forecast?origin=...&destination=..."}
+
+@app.get("/favicon.ico")
+async def favicon():
+    return {"status": "no-favicon"}
+
 @app.get("/traffic-forecast")
 async def get_forecast(origin: str, destination: str, days: int = 7):
     # 1. FLAT VALIDATION (No blocks that can cause syntax errors)
