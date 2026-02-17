@@ -22,21 +22,22 @@ def get_gmaps_client():
 
 @app.get("/traffic-forecast")
 async def get_forecast(origin: str, destination: str, days: int = 7):
-    # --- FIX: Validation MUST be at the very top, before 'try' starts ---
-    # This prevents the 'expected except or finally block' SyntaxError
-    validated_days = days
-    if validated_days > 14:
-        validated_days = 14
-    if validated_days < 1:
-        validated_days = 1
+    # --- STEP 1: VALIDATION (MUST BE ABOVE THE TRY BLOCK) ---
+    v_days = days
+    if v_days > 14:
+        v_days = 14
+    if v_days < 1:
+        v_days = 1
     
     forecast_data = []
+    # Using UTC-friendly timestamps for Vercel
     start_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
+    # --- STEP 2: THE TRY BLOCK (NO INTERRUPTIONS ALLOWED) ---
     try:
         gmaps = get_gmaps_client()
         
-        for i in range(validated_days):
+        for i in range(v_days):
             current_day = start_date + timedelta(days=i)
             ts = int(current_day.timestamp())
             
@@ -53,7 +54,7 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
 
             secs = element['duration_in_traffic']['value']
             
-            # Nested Color Logic (Properly Indented)
+            # Nested Color Logic
             color = "#4CAF50" # Green
             if 1800 < secs <= 2700:
                 color = "#FFC107" # Yellow
@@ -83,5 +84,5 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
         }
 
     except Exception as e:
-        # This block now correctly 'closes' the try block
+        # --- STEP 3: THE MANDATORY EXCEPT BLOCK ---
         raise HTTPException(status_code=500, detail=str(e))
