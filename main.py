@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Enable CORS for frontend integration (Lovable/FlutterFlow)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,27 +15,24 @@ app.add_middleware(
 )
 
 def get_gmaps_client():
-    """Safely retrieves the API key and initializes the client inside the request."""
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not api_key:
-        raise HTTPException(
-            status_code=500, 
-            detail="Deployment Error: GOOGLE_MAPS_API_KEY is not set in Vercel settings."
-        )
+        raise HTTPException(status_code=500, detail="API Key Missing")
     return googlemaps.Client(key=api_key)
 
 @app.get("/traffic-forecast")
 async def get_forecast(origin: str, destination: str, days: int = 7):
-    # 1. Validation logic sits outside the 'try' block
-    if days > 14: days = 14
-    if days < 1: days = 1
+    # --- FIX: Validation MUST happen before the 'try' block starts ---
+    if days > 14: 
+        days = 14
+    if days < 1: 
+        days = 1
     
     forecast_data = []
-    # Start predicting from tomorrow at 9:00 AM (serverless-friendly timestamp)
     start_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
+    # --- Start the try block here ---
     try:
-        # 2. Initialization inside the 'try' to catch any connection errors
         gmaps = get_gmaps_client()
         
         for i in range(days):
@@ -51,14 +47,12 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
             )
             
             element = result['rows'][0]['elements'][0]
-            
             if element['status'] != 'OK':
                 continue
 
             secs = element['duration_in_traffic']['value']
             
-            # 3. Heat Map Color Logic
-            # Green: < 30m | Yellow: 30-45m | Red: > 45m
+            # Color Logic
             color = "#4CAF50" # Green
             if 1800 < secs <= 2700: color = "#FFC107" # Yellow
             elif secs > 2700: color = "#F44336" # Red
@@ -72,23 +66,19 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
             })
             
         if not forecast_data:
-            raise HTTPException(status_code=404, detail="No traffic data found for this route.")
+            raise HTTPException(status_code=404, detail="No route data found")
 
-        # 4. Best Day Summary Logic
         best_entry = min(forecast_data, key=lambda x: x['seconds'])
 
         return {
             "status": "success",
-            "origin": origin,
-            "destination": destination,
             "best_day": {
                 "day": best_entry['day'],
-                "duration": best_entry['duration'],
-                "date": best_entry['date']
+                "duration": best_entry['duration']
             },
             "forecast": forecast_data
         }
-        
+
     except Exception as e:
-        # 5. This block MUST exist to prevent the SyntaxError
-        raise HTTPException(status_code=500, detail=f"Backend Error: {str(e)}")
+        # --- Mandatory except block closes the 'try' ---
+        raise HTTPException(status_code=500, detail=str(e))
