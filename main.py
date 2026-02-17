@@ -15,27 +15,25 @@ app.add_middleware(
 
 @app.get("/traffic-forecast")
 async def get_forecast(origin: str, destination: str, days: int = 7):
-    # 1. Logic and Validation (Top Level - No Try Block)
+    # 1. Immediate Validation (No 'try' block here to avoid SyntaxErrors)
     v_days = min(max(days, 1), 14)
-    forecast_data = []
     
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="API Key Missing")
 
-    # Initialize client
     gmaps = googlemaps.Client(key=api_key)
+    forecast_data = []
     
     # Base arrival time: Tomorrow at 9:00 AM
     start_dt = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
-    # 2. The Loop
+    # 2. The Processing Loop
     for i in range(v_days):
         current_day = start_dt + timedelta(days=i)
         ts = int(current_day.timestamp())
         
         try:
-            # Wrap ONLY the external API call in a try/except
             result = gmaps.distance_matrix(
                 origins=origin,
                 destinations=destination,
@@ -49,7 +47,7 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
 
             secs = element['duration_in_traffic']['value']
             
-            # Color Logic
+            # Color Intensity Mapping
             color = "#4CAF50" # Green
             if 1800 < secs <= 2700:
                 color = "#FFC107" # Yellow
@@ -63,12 +61,10 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
                 "seconds": secs,
                 "hex_color": color
             })
-        except Exception as api_err:
-            # If one day fails, log it and keep moving
-            print(f"Error on day {i}: {api_err}")
+        except Exception:
             continue
             
-    # 3. Final Response Construction
+    # 3. Final Response
     if not forecast_data:
         raise HTTPException(status_code=404, detail="No route data found")
 
