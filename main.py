@@ -1,19 +1,23 @@
 import os
-import time
-from datetime import datetime, timedelta
 import googlemaps
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
+# Get the key once at the top
 GOOGLE_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
 
 @app.get("/traffic-forecast")
-async def get_forecast(origin: str, destination: str, days: int = 7):
+async def get_forecast(origin: str, destination: str):
+    # Verify the key exists right when the user makes a request
+    if not GOOGLE_API_KEY:
+        raise HTTPException(
+            status_code=500, 
+            detail="Deployment Error: GOOGLE_MAPS_API_KEY is not set in Vercel settings."
+        )
+    
+    # Initialize the client ONLY when needed
+    gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
     # Limit days to prevent API abuse (Google charges per request)
     if days > 14: days = 14
     
