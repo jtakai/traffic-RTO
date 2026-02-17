@@ -4,8 +4,7 @@ import googlemaps
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
-
+app = FastAPI(title="Commute-check")
 
 app.add_middleware(
     CORSMiddleware,
