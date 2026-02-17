@@ -1,70 +1,98 @@
-# traffic-RTO
-🚗 Bay Area Flow: 
+🚗 CommuteWise: Smart Traffic Forecast API
+A lightweight FastAPI service deployed on Vercel that leverages the Google Maps Distance Matrix API to predict the best commuting days. This project was specifically designed to help optimize travel between Hermosa Beach and surrounding business hubs using real-time "best guess" traffic models.
 
-Predictive Commute Analytics
--------------------
-Bay Area Flow is a predictive traffic modeling API and mobile dashboard designed for the hybrid-work era. While standard maps show you traffic now, this app forecasts congestion for the next 14 days by analyzing historical patterns and tech-sector office mandates.
+🌟 Features
+* Predictive Analysis: Queries Google’s traffic models for the next $n$ days to find the statistical "sweet spot" for your commute.
+* Color-Coded Insights: Returns HEX codes based on traffic density:
+    * 🟢 Green: < 30 mins (Smooth sailing)
+    * 🟡 Yellow: 30–45 mins (Moderate)
+    * 🔴 Red: > 45 mins (Heavy congestion)
+* Vercel Optimized: Built for serverless execution with automated UTC/Local time conversions.
+* EV Friendly: Minimal footprint, designed to eventually integrate with EV charging schedules (Hyundai Bluelink).
 
-🌟 Key Features
--------------------
-7-Day Predictive Heatmap: 
-	Visualizes morning and evening congestion for any Bay Area route.
+🛠️ Tech Stack
+* Language: Python 3.13
+* Framework: FastAPI
+* Deployment: Vercel (Serverless Functions)
+* API: Google Maps (Distance Matrix)
+* Testing: Requests & Pytest
 
-Dynamic Route Analysis: 
-	User-defined Origin and Destination fields with real-time geocoding.
-"Best Day" Summary: 
-	Automatically identifies the lightest traffic window in your selected range.
+🚀 Deployment & Environment Setup
+1. Google Cloud Configuration
+1. Enable the Distance Matrix API in your Google Cloud Console.
+2. Ensure a Billing Account is linked (required for traffic data).
+3. Generate an API Key.
 
-Variable Date Range: 
-	Toggle forecasts from 1 to 14 days.
+2. Vercel Environment Variables
+Add the following key to your Vercel project settings:
+Key	Value
+Maps_API_KEY	your_api_key_here
 
-One-Tap Swap: 
-Instantly flip between "Home-to-Work" and "Work-to-Home" views.
+Note: After updating environment variables, you must trigger a "Redeploy" in Vercel and uncheck "Use existing Build Cache" to inject the new keys.
 
-🛠️ Technology Stack
-Backend: 
--------------------
-Python 3.11+, FastAPI (High-performance asynchronous API)
+📡 API Usage
+Endpoint: GET /traffic-forecast
+Parameters:
 
-Traffic Engine: 
--------------------
-Google Maps Distance Matrix API (best_guess traffic model)
+origin (string): Your starting point (e.g., "Hermosa Beach, CA").
 
-Frontend: JavaScript / Lovable.dev (Mobile-responsive UI)
+destination (string): Your workplace (e.g., "Irvine, CA").
 
-Deployment: Vercel (Serverless Functions)
-
-🚀 Getting Started
--------------------
-1. Prerequisites
-
-A Google Cloud Project with the Distance Matrix API enabled.
-Python 3.9+ installed locally.
+days (int): Number of days to forecast (Max: 14).
 
 
-2. Installation
--------------------
-Bash# 
-# Clone the repository
-git clone https://github.com/your-username/bay-area-flow.git
-cd bay-area-flow
 
-# Install dependencies
-pip install -r requirements.txt
+Example Request:
+Bash:
+curl "https://your-project.vercel.app/traffic-forecast?origin=Hermosa+Beach&destination=Irvine&days=5"
 
-3. Environment Variables
--------------------
-Create a .env file or add these to your Vercel dashboard:
-Plaintext
-GOOGLE_MAPS_API_KEY=your_api_key_here
+Example Response:
+JSON
+{
+  "status": "success",
+  "best_day": {
+    "day": "Wednesday",
+    "duration": "38 mins"
+  },
+  "forecast": [
+    {
+      "day": "Monday",
+      "date": "02-23",
+      "duration": "45 mins",
+      "seconds": 2700,
+      "hex_color": "#FFC107"
+    },
+    ...
+  ]
+}
 
-4. Running Locally
--------------------
-Bashfastapi dev main.py
-Your API will be live at http://127.0.0.1:8000/traffic-forecast?origin=Redwood City&destination=Cupertino&days=7.
+🧪 Local Development
+Install Dependencies:
 
-Parameter,Type,Description
-----------------------------
-origin,string,Starting address or city.
-destination,string,Ending address or city.
-days,int,Number of days to forecast (1-14).
+Bash
+pip install "fastapi[standard]" googlemaps requests
+Set Local Key:
+
+Bash
+export GOOGLE_MAPS_API_KEY=your_key_here
+Run Dev Server:
+
+Bash
+fastapi dev main.py
+Run Test Script:
+
+Bash
+python test_api.py
+🗺️ Roadmap
+[ ] Phase 2: Integrate with Hyundai Bluelink API to suggest departure times based on Ioniq 5 battery state.
+
+[ ] Phase 3: Frontend dashboard for a "Commute Calendar" view.
+
+[ ] Phase 4: SMS Alerts for the "Best Day to Drive" sent every Sunday night.
+
+📄 License
+MIT License - Created by Joe Takai
+
+
+
+
