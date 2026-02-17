@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import datetime, timedelta
 import googlemaps
 from fastapi import FastAPI, HTTPException
@@ -14,33 +13,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_gmaps_client():
+@app.get("/traffic-forecast")
+async def get_forecast(origin: str, destination: str, days: int = 7):
+    # 1. Logic and Validation (Top Level - No Try Block)
+    v_days = min(max(days, 1), 14)
+    forecast_data = []
+    
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="API Key Missing")
-    return googlemaps.Client(key=api_key)
 
-@app.get("/traffic-forecast")
-async def get_forecast(origin: str, destination: str, days: int = 7):
-    # --- 1. PRE-VALIDATION (MUST STAY OUTSIDE TRY) ---
-    v_days = days
-    if v_days > 14:
-        v_days = 14
-    if v_days < 1:
-        v_days = 1
+    # Initialize client
+    gmaps = googlemaps.Client(key=api_key)
     
-    forecast_data = []
-    # Using timestamp() for UTC server compatibility
+    # Base arrival time: Tomorrow at 9:00 AM
     start_dt = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
-    # --- 2. THE TRY BLOCK (UNINTERRUPTED) ---
-    try:
-        gmaps = get_gmaps_client()
+    # 2. The Loop
+    for i in range(v_days):
+        current_day = start_dt + timedelta(days=i)
+        ts = int(current_day.timestamp())
         
-        for i in range(v_days):
-            current_day = start_dt + timedelta(days=i)
-            ts = int(current_day.timestamp())
-            
+        try:
+            # Wrap ONLY the external API call in a try/except
             result = gmaps.distance_matrix(
                 origins=origin,
                 destinations=destination,
@@ -54,7 +49,7 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
 
             secs = element['duration_in_traffic']['value']
             
-            # --- COLOR LOGIC (INSIDE LOOP) ---
+            # Color Logic
             color = "#4CAF50" # Green
             if 1800 < secs <= 2700:
                 color = "#FFC107" # Yellow
@@ -68,21 +63,22 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
                 "seconds": secs,
                 "hex_color": color
             })
+        except Exception as api_err:
+            # If one day fails, log it and keep moving
+            print(f"Error on day {i}: {api_err}")
+            continue
             
-        if not forecast_data:
-            raise HTTPException(status_code=404, detail="No route data found")
+    # 3. Final Response Construction
+    if not forecast_data:
+        raise HTTPException(status_code=404, detail="No route data found")
 
-        best_day = min(forecast_data, key=lambda x: x['seconds'])
+    best_day_obj = min(forecast_data, key=lambda x: x['seconds'])
 
-        return {
-            "status": "success",
-            "best_day": {
-                "day": best_day['day'],
-                "duration": best_day['duration']
-            },
-            "forecast": forecast_data
-        }
-
-    except Exception as e:
-        # --- 3. MANDATORY CLOSING BLOCK ---
-        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "status": "success",
+        "best_day": {
+            "day": best_day_obj['day'],
+            "duration": best_day_obj['duration']
+        },
+        "forecast": forecast_data
+    }
