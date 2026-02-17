@@ -27,9 +27,7 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
     if safe_days > 14: safe_days = 14
     if safe_days < 1: safe_days = 1
     
-#    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-    GOOGLE_MAPS_API_KEY = "AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4"
-    api_key = "AIzaSyBHKTnE_f1rTRanA5tR4ATO2crPuwachU4"
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="API Key Missing")
 
