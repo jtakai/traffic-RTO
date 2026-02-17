@@ -4,20 +4,24 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-# Get the key once at the top
-GOOGLE_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+# 1. Do NOT initialize the client here at the top level.
+# Line 13 was causing the crash because GOOGLE_API_KEY was None at runtime.
 
 @app.get("/traffic-forecast")
-async def get_forecast(origin: str, destination: str):
-    # Verify the key exists right when the user makes a request
-    if not GOOGLE_API_KEY:
+async def get_forecast(origin: str, destination: str, days: int = 7):
+    # 2. Fetch the key inside the request handler
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    
+    if not api_key:
         raise HTTPException(
             status_code=500, 
-            detail="Deployment Error: GOOGLE_MAPS_API_KEY is not set in Vercel settings."
+            detail="Deployment Error: GOOGLE_MAPS_API_KEY is not set in Vercel Environment Variables."
         )
-    
-    # Initialize the client ONLY when needed
-    gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
+
+    try:
+        # 3. Initialize the client safely here
+        gmaps = googlemaps.Client(key=api_key)
+        
     # Limit days to prevent API abuse (Google charges per request)
     if days > 14: days = 14
     
@@ -54,6 +58,6 @@ async def get_forecast(origin: str, destination: str):
             })
             
         return {"origin": origin, "destination": destination, "forecast": forecast_data}
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Google API Error: {str(e)}")
