@@ -7,30 +7,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
 
 @app.get("/traffic-forecast")
-async def get_forecast(origin: str, destination: str):
-    forecast_data = []
+async def get_forecast(origin: str, destination: str, days: int = 7):
+    # Limit days to prevent API abuse (Google charges per request)
+    if days > 14: days = 14
     
-    # Predict for 9:00 AM arrivals for the next 7 days
-    start_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    forecast_data = []
+    start_date = datetime.now().replace(hour=9, minute=0, second=0) + timedelta(days=1)
 
     try:
-        # Initial check to see if both addresses are valid
-        test_result = gmaps.distance_matrix(origins=origin, destinations=destination)
-        if test_result['rows'][0]['elements'][0]['status'] != 'OK':
-            raise HTTPException(status_code=400, detail="One or both addresses are invalid.")
-
-        for i in range(7):
+        for i in range(days):
             current_day = start_date + timedelta(days=i)
             ts = int(time.mktime(current_day.timetuple()))
             
@@ -42,19 +33,23 @@ async def get_forecast(origin: str, destination: str):
             )
             
             element = result['rows'][0]['elements'][0]
+            secs = element['duration_in_traffic']['value']
+            
+            # --- COLOR LOGIC (Backend Calculated) ---
+            # Green: < 30m | Yellow: 30-45m | Red: > 45m
+            color = "#4CAF50" # Green
+            if 1800 < secs <= 2700: color = "#FFC107" # Yellow
+            elif secs > 2700: color = "#F44336" # Red
+
             forecast_data.append({
                 "day": current_day.strftime('%A'),
                 "date": current_day.strftime('%m-%d'),
                 "duration": element['duration_in_traffic']['text'],
-                "seconds": element['duration_in_traffic']['value']
+                "seconds": secs,
+                "hex_color": color
             })
             
-        return {
-            "status": "success", 
-            "origin": origin, 
-            "destination": destination, 
-            "forecast": forecast_data
-        }
+        return {"origin": origin, "destination": destination, "forecast": forecast_data}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
