@@ -22,7 +22,7 @@ def get_gmaps_client():
 
 @app.get("/traffic-forecast")
 async def get_forecast(origin: str, destination: str, days: int = 7):
-    # --- STEP 1: VALIDATION (MUST BE ABOVE THE TRY BLOCK) ---
+    # --- 1. PRE-VALIDATION (MUST STAY OUTSIDE TRY) ---
     v_days = days
     if v_days > 14:
         v_days = 14
@@ -30,15 +30,15 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
         v_days = 1
     
     forecast_data = []
-    # Using UTC-friendly timestamps for Vercel
-    start_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    # Using timestamp() for UTC server compatibility
+    start_dt = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
-    # --- STEP 2: THE TRY BLOCK (NO INTERRUPTIONS ALLOWED) ---
+    # --- 2. THE TRY BLOCK (UNINTERRUPTED) ---
     try:
         gmaps = get_gmaps_client()
         
         for i in range(v_days):
-            current_day = start_date + timedelta(days=i)
+            current_day = start_dt + timedelta(days=i)
             ts = int(current_day.timestamp())
             
             result = gmaps.distance_matrix(
@@ -54,7 +54,7 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
 
             secs = element['duration_in_traffic']['value']
             
-            # Nested Color Logic
+            # --- COLOR LOGIC (INSIDE LOOP) ---
             color = "#4CAF50" # Green
             if 1800 < secs <= 2700:
                 color = "#FFC107" # Yellow
@@ -72,17 +72,17 @@ async def get_forecast(origin: str, destination: str, days: int = 7):
         if not forecast_data:
             raise HTTPException(status_code=404, detail="No route data found")
 
-        best_entry = min(forecast_data, key=lambda x: x['seconds'])
+        best_day = min(forecast_data, key=lambda x: x['seconds'])
 
         return {
             "status": "success",
             "best_day": {
-                "day": best_entry['day'],
-                "duration": best_entry['duration']
+                "day": best_day['day'],
+                "duration": best_day['duration']
             },
             "forecast": forecast_data
         }
 
     except Exception as e:
-        # --- STEP 3: THE MANDATORY EXCEPT BLOCK ---
+        # --- 3. MANDATORY CLOSING BLOCK ---
         raise HTTPException(status_code=500, detail=str(e))
